@@ -1,0 +1,158 @@
+{
+  "$schema-template": "2.0.0",
+  "modulesContent": {
+    "$edgeAgent": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "runtime": {
+          "type": "docker",
+          "settings": {
+            "minDockerVersion": "v1.25",
+            "loggingOptions": "",
+            "registryCredentials": {
+              "pumswindt": {
+                "username": "$CONTAINER_REGISTRY_USERNAME",
+                "password": "$CONTAINER_REGISTRY_PASSWORD",
+                "address": "<CONTAINER REPOSITORY>"
+              }
+            }
+          }
+        },
+        "systemModules": {
+          "edgeAgent": {
+            "type": "docker",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-agent:1.0",
+              "createOptions": {}
+            }
+          },
+          "edgeHub": {
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "mcr.microsoft.com/azureiotedge-hub:1.0",
+              "createOptions": {
+                "HostConfig": {
+                  "PortBindings": {
+                    "5671/tcp": [
+                      {
+                        "HostPort": "5671"
+                      }
+                    ],
+                    "8883/tcp": [
+                      {
+                        "HostPort": "8883"
+                      }
+                    ],
+                    "443/tcp": [
+                      {
+                        "HostPort": "443"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "modules": {
+          "SerialInterface": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.SerialInterface}",
+              "createOptions": {
+                "HostConfig": {
+                  "Devices": [
+                    {
+                      "PathOnHost": "/dev/ttyUSB0",
+                      "PathInContainer": "/dev/ttyUSB0",
+                      "CgroupPermissions": "mrw"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "Controller": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.Controller}",
+              "createOptions": {}
+            }
+          },
+          "IshareAdapter": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.IshareAdapter}",
+              "createOptions": {}
+            }
+          },
+          "ThingsboardAdapter": {
+            "version": "1.0",
+            "type": "docker",
+            "status": "running",
+            "restartPolicy": "always",
+            "settings": {
+              "image": "${MODULES.ThingsboardAdapter}",
+              "createOptions": {}
+            }
+          }
+        }
+      }
+    },
+    "$edgeHub": {
+      "properties.desired": {
+        "schemaVersion": "1.0",
+        "routes": {
+          "SerialInterfaceToController": "FROM /messages/modules/SerialInterface/outputs/InterfaceOut INTO BrokeredEndpoint(\"/modules/Controller/inputs/InterfaceIn\")",
+          "ControllerToSerialInterface": "FROM /messages/modules/Controller/outputs/InterfaceOut INTO BrokeredEndpoint(\"/modules/SerialInterface/inputs/InterfaceIn\")",
+          "ControllerToIshareAdapter": "FROM /messages/modules/Controller/outputs/AdapterOut INTO BrokeredEndpoint(\"/modules/IshareAdapter/inputs/AdapterIn\")",
+          "ControllerToThingsboardAdapter": "FROM /messages/modules/Controller/outputs/AdapterOut INTO BrokeredEndpoint(\"/modules/ThingsboardAdapter/inputs/AdapterIn\")"
+        },
+        "storeAndForwardConfiguration": {
+          "timeToLiveSecs": 7200
+        }
+      }
+    },
+    "SerialInterface": {
+      "properties.desired": {
+        "BAUDRATE": 115200,
+        "SERIALPORT": "/dev/ttyUSB0",
+        "PARITY": "NONE",
+        "STOPBITS": "ONE",
+        "DATABITS": 8,
+        "TIMEOUT": 0.5
+      }
+    },
+    "IshareAdapter": {
+      "properties.desired": {
+        "URL": "<API URL>"
+      }
+    },
+    "Controller": {
+      "properties.desired": {
+        "Modules": {
+          "SWT-Head-Module2": {
+            "InterfaceType": "SerialInterface",
+            "Address": 1
+          }
+        }
+      }
+    },
+    "ThingsboardAdapter": {
+      "properties.desired": {
+        "URL": "<API URL>"
+      }
+    }
+  }
+}
